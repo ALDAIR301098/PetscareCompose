@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalComposeUiApi::class)
+@file:OptIn(ExperimentalComposeUiApi::class, ExperimentalComposeUiApi::class)
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -109,7 +109,7 @@ private fun PhoneTextField(text: String, error: String?) {
 }
 
 // *************************************************************************************************
-//                                               PREVIEWS
+//    /                                           PREVIEWS
 // *************************************************************************************************
 
 @Preview(showBackground = true)

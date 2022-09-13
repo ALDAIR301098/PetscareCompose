@@ -46,7 +46,7 @@ fun MyTextField(
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
     maxChar: Int? = null,
-    charCounterEnabled: Boolean = false,
+    isCounterMaxCharEnabled: Boolean = false,
     enabled: Boolean = true,
     errorIconEnabled: Boolean = true,
     readOnly: Boolean = false,
@@ -131,7 +131,7 @@ fun MyTextField(
                 modifier = modifier.constrainAs(txtError) {
                     top.linkTo(textField.bottom, 4.dp)
                     start.linkTo(textField.start, 16.dp)
-                    if (charCounterEnabled) end.linkTo(txtCounter.start, 16.dp)
+                    if (isCounterMaxCharEnabled) end.linkTo(txtCounter.start, 16.dp)
                     else end.linkTo(textField.end, 16.dp)
                     width = Dimension.fillToConstraints
                 },
@@ -142,7 +142,7 @@ fun MyTextField(
             )
         }
 
-        if (charCounterEnabled) {
+        if (isCounterMaxCharEnabled) {
             Text(
                 text = "${bodyText.length}/$maxChar",
                 modifier = Modifier.constrainAs(txtCounter) {

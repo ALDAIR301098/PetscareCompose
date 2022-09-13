@@ -196,7 +196,7 @@ private fun PhoneTextField(
         ),
         helperText = "Ingrese 10 dígitos",
         maxChar = 10,
-        charCounterEnabled = true,
+        isCounterMaxCharEnabled = true,
         errorText = error,
     )
 }

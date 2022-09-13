@@ -1,10 +1,10 @@
 package com.softgames.petscare.presentation.navigation
 
+import LoginScreen2
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.softgames.petscare.presentation.screens.login2.LoginScreen2
 
 
 @Composable

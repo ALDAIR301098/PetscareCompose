@@ -1,146 +1,190 @@
-@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class,
-    ExperimentalMaterial3Api::class, ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalComposeUiApi::class, ExperimentalComposeUiApi::class,
+    ExperimentalMaterial3Api::class)
 
-package com.softgames.petscare.presentation.screens.login
-
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.ConstraintSet
+import androidx.constraintlayout.compose.Dimension
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.firebase.auth.AuthCredential
-import com.google.firebase.auth.GoogleAuthProvider
 import com.softgames.petscare.R
-import com.softgames.petscare.data.source.C_PET_OWNER
-import com.softgames.petscare.data.source.C_PROVIDER
-import com.softgames.petscare.domain.contracts.GoogleAuthContract
 import com.softgames.petscare.domain.model.Country
 import com.softgames.petscare.domain.model.LoginState.*
 import com.softgames.petscare.presentation.components.buttons.MyButton
 import com.softgames.petscare.presentation.components.buttons.MyOutlinedButton
-import com.softgames.petscare.presentation.components.others.LoadingAnimation
 import com.softgames.petscare.presentation.components.others.MyIcon
 import com.softgames.petscare.presentation.components.textfields.MyTextField
+import com.softgames.petscare.presentation.screens.login.ImageSlider
+import com.softgames.petscare.presentation.screens.login.LoginViewModel
 import com.softgames.petscare.presentation.screens.login.components.CountrySelector
 import com.softgames.petscare.presentation.theme.PetscareTheme
+import com.softgames.petscare.util.logMessage
+import kotlinx.coroutines.launch
 
-@Composable
+@Composable()
 fun LoginScreen(
-    modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel(),
-    showRegisterScreen: () -> Unit = {},
-    showPhoneAuthScreen: () -> Unit = {},
-    showMailAuthScreen: () -> Unit = {},
-    showPetOwnerMenuScreen: () -> Unit = {},
-    showProviderMenuScreen: () -> Unit = {},
 ) {
 
-    // STATES **************************************************************************************
-
     val loginState by viewModel.loginState.collectAsState()
-    val country by viewModel.country.collectAsState()
-    val countryError by viewModel.countryError.collectAsState()
-    val phone by viewModel.phone.collectAsState()
-    val phoneError by viewModel.phoneError.collectAsState()
-    val isLoginButtonEnabled by viewModel.isButtonLoginEnabled.collectAsState()
-    var isGoogleButtonLoading by remember { mutableStateOf(false) }
-    var showCountrySelector by remember { mutableStateOf(false) }
-
-    val googleAuthRequest = SignInWithGoogle(
-        onSuccess = {
-            isGoogleButtonLoading = false
-            viewModel.signInPetscare(it)
-        },
-        onFailure = { isGoogleButtonLoading = false }
-    )
-
-    // SCREEN **************************************************************************************
 
     when (loginState) {
-        LOGGED -> LaunchedEffect(key1 = Unit) {
-            if (viewModel.checkIfUserExist()) {
-                when (viewModel.checkUserType()) {
-                    C_PET_OWNER -> {}
-                    C_PROVIDER -> {}
-                }
-            } else showRegisterScreen()
+        LOGGED -> {
+            logMessage("Se inicio sesión en Petscare")
         }
-
         NOT_LOGGED, LOADING -> {
 
-            Column(modifier = modifier.fillMaxSize()) {
+            ConstraintLayout(
+                constraintSet = constraints, modifier = Modifier.fillMaxSize()
+            ) {
+                ImageSlider(Modifier.layoutId("imageSlider"))
+                LoginCard(Modifier.layoutId("loginCard"), viewModel)
 
-                if (loginState == LOADING) LinearProgressIndicator(Modifier.fillMaxWidth())
+                if (loginState == LOADING) LinearProgressIndicator(
+                    Modifier.layoutId("progressIndicator")
+                )
 
-                Scaffold(
-                    topBar = { TopBar() }
-                ) { padding ->
-                    Column(
-                        modifier = modifier
-                            .fillMaxSize()
-                            .padding(padding)
-                            .padding(top = 16.dp)
-                            .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        CountryDropDownMenu(
-                            country = country,
-                            countryError = countryError,
-                            expanded = showCountrySelector,
-                            onExpandedChange = { isExpanded ->
-                                if (isExpanded) showCountrySelector = true
-                            },
-                        )
-                        Column {
-                            PhoneTextField(phone, phoneError) { viewModel.updatePhone(it) }
-                            Spacer(Modifier.height(4.dp))
-                            PhoneHelperText()
-                        }
-                        LoginButton(isLoginButtonEnabled)
-                        LoginDivider()
-                        MailButton() { showMailAuthScreen() }
-                        GoogleButton(isGoogleButtonLoading) {
-                            googleAuthRequest.launch(0); isGoogleButtonLoading = true
-                        }
-                        FacebookButton()
-                    }
-                }
-
-                if (showCountrySelector) CountrySelector() { country ->
-                    showCountrySelector = false
-                    country?.let { viewModel.updateCountry(country) }
-                }
             }
         }
+
+    }
+}
+
+private val constraints = ConstraintSet {
+
+    val progressIndicator = createRefFor("progressIndicator")
+    val imageSlider = createRefFor("imageSlider")
+    val loginCard = createRefFor("loginCard")
+
+    constrain(progressIndicator) {
+        top.linkTo(parent.top)
+        start.linkTo(parent.start)
+        end.linkTo(parent.end)
+        width = Dimension.fillToConstraints
+    }
+
+    constrain(imageSlider) {
+        top.linkTo(parent.top)
+        start.linkTo(parent.start)
+        end.linkTo(parent.end)
+    }
+
+    constrain(loginCard) {
+        top.linkTo(imageSlider.bottom, (-16).dp)
+        start.linkTo(parent.start)
+        end.linkTo(parent.end)
+        bottom.linkTo(parent.bottom)
+        height = Dimension.fillToConstraints
     }
 
 }
 
-// COMPONENTS **************************************************************************************
+
+// *************************************************************************************************
+//                                          COMPONENTS
+// *************************************************************************************************
 
 @Composable
-private fun TopBar() {
-    LargeTopAppBar(
-        modifier = Modifier.padding(end = 16.dp),
-        title = { Text("Iniciar sesión o registrate en Petscare") },
-        colors = TopAppBarDefaults.largeTopAppBarColors(
+private fun LoginCard(
+    modifier: Modifier,
+    viewModel: LoginViewModel,
+) {
+
+    val isCountrySelectorVisible by viewModel.isCountySelectorVisible.collectAsState()
+    val scope = rememberCoroutineScope()
+
+    val country by viewModel.country.collectAsState()
+    val countryError by viewModel.countryError.collectAsState()
+    val phone by viewModel.phone.collectAsState()
+    val phoneError by viewModel.phoneError.collectAsState()
+
+    Card(
+        modifier = modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
+        colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.background
         )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+
+            TitleText()
+            CountryDropDownMenu(
+                country = country,
+                countryError = countryError,
+                isExpanded = isCountrySelectorVisible,
+                onExpandedChange = { isExpanded ->
+                    if (isExpanded) viewModel.showCountrySelector(true)
+                }
+            )
+            Column {
+                PhoneTextField(
+                    phone = phone,
+                    error = phoneError,
+                    onTextChange = { viewModel.updatePhone(it) }
+                )
+                PhoneHelperText()
+            }
+            LoginButton {
+                scope.launch {
+                    logMessage("SE PRESIONO EL LOGIN BUTTON")
+                    viewModel.signInPetscare()
+                }
+            }
+            LoginDivider()
+            MailButton { }
+            Row {
+                GoogleButton(Modifier.weight(1f)) { }
+                Spacer(Modifier.width(16.dp))
+                FacebookButton(Modifier.weight(1f)) { }
+            }
+
+            if (isCountrySelectorVisible) {
+                CountrySelector() { country ->
+                    viewModel.showCountrySelector(false)
+                    country?.let { viewModel.updateCountry(it) }
+                }
+            }
+
+        }
+    }
+}
+
+@Composable
+private fun TitleText() {
+    Text(
+        text = "Iniciar sesión en Petscare",
+        style = MaterialTheme.typography.headlineMedium,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth()
     )
 }
 
@@ -148,11 +192,11 @@ private fun TopBar() {
 private fun CountryDropDownMenu(
     country: Country?,
     countryError: String?,
-    expanded: Boolean,
-    onExpandedChange: (showSelector: Boolean) -> Unit,
+    isExpanded: Boolean,
+    onExpandedChange: (isExpanded: Boolean) -> Unit,
 ) {
     ExposedDropdownMenuBox(
-        expanded = expanded,
+        expanded = isExpanded,
         onExpandedChange = onExpandedChange)
     {
         MyTextField(
@@ -184,20 +228,20 @@ private fun CountryDropDownMenu(
 private fun PhoneTextField(
     phone: String,
     error: String?,
-    onValueChange: (String) -> Unit,
+    onTextChange: (String) -> Unit,
 ) {
+
     MyTextField(
         bodyText = phone,
-        onValueChange = { onValueChange(it) },
-        labelText = "Teléfono",
+        onValueChange = { onTextChange(it) },
+        labelText = "Telefóno",
+        errorText = error,
         leadingIcon = { MyIcon(Icons.Outlined.Phone) },
-        keyboardOptions = KeyboardOptions().copy(
-            keyboardType = KeyboardType.Phone
-        ),
-        helperText = "Ingrese 10 dígitos",
         maxChar = 10,
         isCounterMaxCharEnabled = true,
-        errorText = error,
+        keyboardOptions = KeyboardOptions.Default.copy(
+            keyboardType = KeyboardType.Phone
+        )
     )
 }
 
@@ -208,20 +252,19 @@ private fun PhoneHelperText() {
         style = MaterialTheme.typography.bodySmall,
         textAlign = TextAlign.Justify
     )
-
 }
 
 @Composable
-private fun LoginButton(isEnabled: Boolean) {
-    MyButton(onClick = { /*TODO*/ }, text = "Continuar", enabled = isEnabled)
+private fun LoginButton(onClick: () -> Unit) {
+    MyButton(onClick = onClick, text = "Iniciar sesión")
 }
 
 @Composable
-private fun LoginDivider(modifier: Modifier = Modifier) {
+private fun LoginDivider() {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Divider(modifier = modifier.weight(1f))
-        Text(text = "o bien", modifier = modifier.padding(horizontal = 16.dp))
-        Divider(modifier = modifier.weight(1f))
+        Divider(Modifier.weight(1f))
+        Text(text = "o continúa mediante", modifier = Modifier.padding(horizontal = 16.dp))
+        Divider(Modifier.weight(1f))
     }
 }
 
@@ -230,15 +273,12 @@ private fun MailButton(onClick: () -> Unit) {
     MyOutlinedButton(
         onClick = onClick,
         colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = MaterialTheme.colorScheme.onBackground,
-            containerColor = Color.White,
+            contentColor = MaterialTheme.colorScheme.onBackground
         )
     ) {
         MyIcon(Icons.Outlined.Mail)
-        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
         Text(
-            text = "Continuar con correo electrónico",
-            overflow = TextOverflow.Ellipsis,
+            text = "Continuar mediante correo",
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.Center
         )
@@ -246,43 +286,17 @@ private fun MailButton(onClick: () -> Unit) {
 }
 
 @Composable
-fun GoogleButton(isLoading: Boolean, onClick: () -> Unit) {
+private fun GoogleButton(modifier: Modifier, onClick: () -> Unit) {
     MyOutlinedButton(
         onClick = onClick,
         colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = MaterialTheme.colorScheme.onBackground,
-            containerColor = Color.White
-        )
+            contentColor = MaterialTheme.colorScheme.onBackground
+        ),
+        modifier = modifier
     ) {
-        if (isLoading) {
-            LoadingAnimation()
-        } else {
-            MyIcon(drawable = R.drawable.ic_google, modifier = Modifier.size(22.dp))
-            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-            Text(
-                text = "Continuar con Google",
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-@Composable
-fun FacebookButton() {
-    MyOutlinedButton(
-        onClick = { /*TODO*/ },
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = MaterialTheme.colorScheme.onBackground,
-            containerColor = Color.White
-        )
-    ) {
-        MyIcon(R.drawable.ic_facebook)
-        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+        MyIcon(R.drawable.ic_google)
         Text(
-            text = "Continuar con Facebook",
-            overflow = TextOverflow.Ellipsis,
+            text = "Google",
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.Center
         )
@@ -290,22 +304,32 @@ fun FacebookButton() {
 }
 
 @Composable
-private fun SignInWithGoogle(
-    onSuccess: (AuthCredential) -> Unit,
-    onFailure: () -> Unit,
-) = rememberLauncherForActivityResult(contract = GoogleAuthContract()
-) { task ->
-    if (task != null) {
-        val account = task.result
-        val credential = GoogleAuthProvider
-            .getCredential(account?.idToken, null)
-        onSuccess(credential)
-    } else onFailure()
+private fun FacebookButton(modifier: Modifier, onClick: () -> Unit) {
+    MyOutlinedButton(
+        onClick = onClick,
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = MaterialTheme.colorScheme.onBackground
+        ), modifier = modifier
+    ) {
+        MyIcon(
+            drawable = R.drawable.ic_facebook,
+            modifier = Modifier.size(25.dp)
+        )
+        Text(
+            text = "Facebook",
+            modifier = Modifier.weight(1f),
+            textAlign = TextAlign.Center
+        )
+    }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
+// *************************************************************************************************
+//                                               PREVIEWS
+// *************************************************************************************************
+
+@Preview(showBackground = true)
 @Composable
-private fun LoginPreview() {
+private fun LoginScreenPreview() {
     PetscareTheme {
         LoginScreen()
     }

@@ -1,36 +1,26 @@
 package com.softgames.petscare.presentation.screens.login
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.google.firebase.FirebaseNetworkException
-import com.google.firebase.auth.AuthCredential
-import com.google.firebase.auth.FirebaseAuthException
-import com.google.firebase.auth.FirebaseUser
-import com.softgames.petscare.data.services.authentication.AuthService
 import com.softgames.petscare.domain.model.Country
 import com.softgames.petscare.domain.model.LoginState
-import com.softgames.petscare.domain.model.LoginState.*
+import com.softgames.petscare.domain.model.LoginState.NOT_LOGGED
 import com.softgames.petscare.util.logMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val authService: AuthService,
+
 ) : ViewModel() {
 
-    // STATES **************************************************************************************
+    private var _loginState: MutableStateFlow<LoginState> = MutableStateFlow(NOT_LOGGED)
+    val loginState = _loginState.asStateFlow()
 
-    private var user: MutableStateFlow<FirebaseUser?> = MutableStateFlow(null)
-
-    private var _country: MutableStateFlow<Country?> = MutableStateFlow(null)
-    val country = _country.asStateFlow()
-
-    private var _countryError: MutableStateFlow<String?> = MutableStateFlow(null)
-    val countryError = _countryError.asStateFlow()
+    private var _isCountySelectorVisible = MutableStateFlow(false)
+    val isCountySelectorVisible = _isCountySelectorVisible.asStateFlow()
 
     private var _phone = MutableStateFlow("")
     val phone = _phone.asStateFlow()
@@ -38,53 +28,50 @@ class LoginViewModel @Inject constructor(
     private var _phoneError: MutableStateFlow<String?> = MutableStateFlow(null)
     val phoneError = _phoneError.asStateFlow()
 
-    private var _isButtonLoginEnabled = MutableStateFlow(false)
-    val isButtonLoginEnabled = _isButtonLoginEnabled.asStateFlow()
+    private var _country: MutableStateFlow<Country?> = MutableStateFlow(null)
+    val country = _country.asStateFlow()
 
-    private var _loginState: MutableStateFlow<LoginState> = MutableStateFlow(NOT_LOGGED)
-    val loginState = _loginState.asStateFlow()
+    private var _countryError: MutableStateFlow<String?> = MutableStateFlow(null)
+    val countryError = _countryError.asStateFlow()
 
-    init {
-        user.value = authService.loadUser()
-        user.value?.let { _loginState.value = LOGGED }
+    // FUNCTIONS ***********************************************************************************
+
+    fun updatePhone(phone: String) {
+        if (phone.length == 10) {
+            if (phoneError.value != null) _phoneError.value = null
+        }
+        _phone.value = phone
     }
-
-    // UPDATE STATES *******************************************************************************
 
     fun updateCountry(country: Country) {
         _country.value = country
+        _countryError.value = null
     }
 
-    fun updatePhone(phone: String) {
-        _phone.value = phone
-        _isButtonLoginEnabled.value = (phone.length == 10)
+    fun showCountrySelector(isVisible: Boolean) {
+        _isCountySelectorVisible.value = isVisible
     }
 
-    // AUTH SERVICES *******************************************************************************
-
-    fun signInPetscare(credential: AuthCredential) {
-        viewModelScope.launch {
-            try {
-                _loginState.value = LOADING
-                user.value = authService.signInPetscare(credential).user
-                _loginState.value = LOGGED
-            } catch (e: Exception) {
-                if (e is FirebaseNetworkException) {
-                    logMessage(authService.getError("NO_INTERNET_CONEXION"))
-                } else {
-                    logMessage(e.printStackTrace())
-                    logMessage(e.message!!)
-                    val exception = e as FirebaseAuthException
-                    logMessage(exception.errorCode)
-                }
-                _loginState.value = NOT_LOGGED
-            }
+    suspend fun signInPetscare() {
+        if (validateData()) {
+            logMessage("Iniciando sesión en Petscare")
+            _loginState.value = LoginState.LOADING
+            delay(7500L)
+            logMessage("Sesión iniciada exitosamente")
+            _loginState.value = LoginState.LOGGED
         }
     }
 
-    suspend fun checkIfUserExist(): Boolean = authService.checkIfUserExist(user.value!!.uid)
-
-    suspend fun checkUserType(): String = authService.checkUserType(user.value!!.uid)
+    private fun validateData(): Boolean {
+        if (country.value == null) {
+            _countryError.value = "Seleccione el país."; return false
+        } else _countryError.value = null
+        if (phone.value.isEmpty()) {
+            _phoneError.value = "Ingresa el teléfono."; return false
+        } else _phoneError.value = null
+        if (phone.value.length != 10) {
+            _phoneError.value = "Ingresa 10 dígitos."; return false
+        } else _phoneError.value = null; return true
+    }
 
 }
-

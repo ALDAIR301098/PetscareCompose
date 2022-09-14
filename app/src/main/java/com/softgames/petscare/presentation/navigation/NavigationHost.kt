@@ -1,6 +1,6 @@
 package com.softgames.petscare.presentation.navigation
 
-import LoginScreen2
+import LoginScreen
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -14,11 +14,11 @@ fun NavigationHost() {
 
     NavHost(
         navController = navController,
-        startDestination = AppDestinations.LoginScreen2.route
+        startDestination = AppDestinations.LoginScreen.route
     ) {
 
-        composable(AppDestinations.LoginScreen2.route) {
-            LoginScreen2()
+        composable(AppDestinations.LoginScreen.route) {
+            LoginScreen()
         }
 
     }
